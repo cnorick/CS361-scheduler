@@ -2,12 +2,50 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+void saveActiveProcessState(SCHEDULER *s);
+void goToNextProcess(SCHEDULER *s);
+
 //Simulate a timer interrupt from hardware. This should initiate
 ////the context switch procedure
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
+	// call a function to save the active process's state 
+	// into process structure
+		// call process code ptr
+			// how? What does this do?
+		// update total_cpu_time to prev + clock cycle
+		// update job_time
+			// what is this?
+		// save the current registers to saved_registers
+		// set the process state as sleeping
 	
+	// function should also increment  current -> switched
+		// is switching to a process and from an object both
+		// things that increment current -> switched?
+	
+	// switch statement on s -> scheduler_algorithm
+	// call the other functions that actually implement the algorithm
+		// be sure to load the next 
+}
+
+void saveActiveProcessState(SCHEDULER *s){
+
+}
+
+void goToNextProcess(SCHEDULER *s){
+	switch(s -> scheduler_algorithm){
+		case SA_ROUND_ROBIN:
+			break;
+		case SA_FAIR:
+			break;
+		case SA_FCFS:
+			break;
+		case SA_SJF:
+			break;
+		default:
+			break;
+	}
 }
 
 ////Create a new scheduler
