@@ -7,6 +7,8 @@ PROCESS *get_process(SCHEDULER *s, PID pid);
 void saveActiveProcessState(SCHEDULER *s);
 void goToNextProcess(SCHEDULER *s);
 
+
+
 //Simulate a timer interrupt from hardware. This should initiate
 ////the context switch procedure
 //// - Context switch must save active process' state into the PROCESS structure
@@ -29,25 +31,6 @@ void timer_interrupt(SCHEDULER *s) {
 	// switch statement on s -> scheduler_algorithm
 	// call the other functions that actually implement the algorithm
 		// be sure to load the next 
-}
-
-void saveActiveProcessState(SCHEDULER *s){
-
-}
-
-void goToNextProcess(SCHEDULER *s){
-	switch(s -> scheduler_algorithm){
-		case SA_ROUND_ROBIN:
-			break;
-		case SA_FAIR:
-			break;
-		case SA_FCFS:
-			break;
-		case SA_SJF:
-			break;
-		default:
-			break;
-	}
 }
 
 ////Create a new scheduler
@@ -112,6 +95,15 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
 
 }
 
+
+
+
+
+
+/********************
+ * Helper Functions *
+ *******************/
+
 // Adds a process to the scheduler in the first open process slot. Returns the pid of the new process (index + 1) or -1 if no slot was found.
 PID add_process(SCHEDULER *s, PROCESS *p) {
     PID i;
@@ -130,3 +122,23 @@ PROCESS *get_process(SCHEDULER *s, PID pid) {
     // process id is 1-based. array is 0-based.
     return &s->process_list[pid - 1]; 
 }
+
+void saveActiveProcessState(SCHEDULER *s){
+
+}
+
+void goToNextProcess(SCHEDULER *s){
+	switch(s -> scheduler_algorithm){
+		case SA_ROUND_ROBIN:
+			break;
+		case SA_FAIR:
+			break;
+		case SA_FCFS:
+			break;
+		case SA_SJF:
+			break;
+		default:
+			break;
+	}
+}
+
