@@ -10,23 +10,16 @@ void goToNextProcess(SCHEDULER *s);
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
-	// call a function to save the active process's state 
-	// into process structure
-		// call process code ptr
-			// how? What does this do?
-		// update total_cpu_time to prev + clock cycle
-		// update job_time
-			// what is this?
-		// save the current registers to saved_registers
-		// set the process state as sleeping
-	
-	// function should also increment  current -> switched
-		// is switching to a process and from an object both
-		// things that increment current -> switched?
+	// save the current process's regisers
+	// update the process' total CPU time	
+	// and all other process' switched time / sleep time remaining
+	// set the current process state as sleeping
 	
 	// switch statement on s -> scheduler_algorithm
 	// call the other functions that actually implement the algorithm
 		// be sure to load the next 
+			// and the new process as active
+			// call process code ptr on the new process
 }
 
 void saveActiveProcessState(SCHEDULER *s){
@@ -44,6 +37,7 @@ void goToNextProcess(SCHEDULER *s){
 		case SA_SJF:
 			break;
 		default:
+			// maybe output an error?
 			break;
 	}
 }
