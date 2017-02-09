@@ -80,10 +80,10 @@ int fork(SCHEDULER *s, PID src_p) {
     PID newPid = add_process(s, parent);
     PROCESS *child = get_process(s, newPid);
 
-    // Do we copy over time as well or make it 0 again?
-
-    // Are we supposed to change this too?
-    //child->state = PS_SLEEPING;
+    // Reset all of the timers/counters for this new process.
+    child->switched = 0;
+    child->total_cpu_time = 0;
+    child->switched_cpu_time = 0;
 
     return child->pid;
 }
@@ -92,7 +92,18 @@ int fork(SCHEDULER *s, PID src_p) {
 ////This exec is called on any PID that IS NOT 1!
 ////exec overwrites the given process with the new name, init, and step
 int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PROCESS_CODE_PTR(step), int job_time) {
+    if(pid == 1)
+        return -1;
+    
+    PROCESS *p = get_process(s, pid);
+    if(p == NULL)
+        return -1;
 
+    p->name = new_name;
+    p->init = init;
+    p->step = step;
+    
+    p->job_time = job_time;
 }
 
 
@@ -119,6 +130,9 @@ PID add_process(SCHEDULER *s, PROCESS *p) {
 
 // Returns the PROCESS with processId pid.
 PROCESS *get_process(SCHEDULER *s, PID pid) {
+    if(pid > MAX_PROCESSES)
+        return NULL;
+
     // process id is 1-based. array is 0-based.
     return &s->process_list[pid - 1]; 
 }
