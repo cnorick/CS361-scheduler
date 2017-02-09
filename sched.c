@@ -2,31 +2,67 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void saveActiveProcessState(SCHEDULER *s);
-void goToNextProcess(SCHEDULER *s);
+void saveActiveProcessRegisters(SCHEDULER *s);
+void updateCurrentProcessTotalCPUTime(SCHEDULER *s);
+void updateAllProcessSleepTimeRemaining(SCHEDULER *s);
+void setCurrentProcessToSleeping(SCHEDULER *s);
+void setNewCurrentProcess(SCHEDULER *s);
+void setNextProcessToCurrent(SCHEDULER *s, unsigned int nextProcess);
+void setCurrentProcessToRunning(SCHEDULER *s);
+void loadActiveProcessRegisters(SCHEDULER *s);
+void updateSwitchedCPUTime(SCHEDULER *s);
+void initializeProcessSwitchedCPUTime(SCHEDULER *s);
+void incrementCurrentProcessSwitched(SCHEDULER *s);
+void callProcessCodePtrStep(SCHEDULER *s);
 
 //Simulate a timer interrupt from hardware. This should initiate
 ////the context switch procedure
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
-	// save the current process's regisers
-	// update the process' total CPU time	
-	// and all other process' switched time / sleep time remaining
-	// set the current process state as sleeping
+	saveActiveProcessRegisters(s);
+	updateCurrentProcessTotalCPUTime(s);
+	updateAllProcessSleepTimeRemaining(s);
+	// setCurrentProcessToSleeping(s); maybe not?
+
+	unsigned int oldCurrentProcess = s -> current; 
 	
-	// switch statement on s -> scheduler_algorithm
-	// call the other functions that actually implement the algorithm
-		// be sure to load the next 
-			// and the new process as active
-			// call process code ptr on the new process
+	setNewCurrentProcess(s);
+
+	unsigned int newCurrentProcess = s -> current;
+	
+	// setCurrentProcessToRunning(s); maybe not?
+	loadActiveProcessRegisters(s);
+
+	if(newCurrentProcess == oldCurrentProcess){
+		updateSwitchedCPUTime(s);
+	}
+	else{
+		initializeProcessSwitchedCPUTime(s);
+		incrementCurrentProcessSwitched(s);
+		callProcessCodePtrStep(s);
+	}
 }
 
-void saveActiveProcessState(SCHEDULER *s){
+void saveActiveProcessRegisters(SCHEDULER *s){
 
 }
 
-void goToNextProcess(SCHEDULER *s){
+void updateCurrentProcessTotalCPUTime(SCHEDULER *s){
+
+}
+
+void updateAllProcessSleepTimeRemaining(SCHEDULER *s){
+
+}
+
+void setCurrentProcessToSleeping(SCHEDULER *s){
+
+}
+
+// all this does is choose set s -> current
+// to what the next process should be
+void setNewCurrentProcess(SCHEDULER *s){
 	switch(s -> scheduler_algorithm){
 		case SA_ROUND_ROBIN:
 			break;
@@ -40,7 +76,39 @@ void goToNextProcess(SCHEDULER *s){
 			// maybe output an error?
 			break;
 	}
+
+	// setNextProcessToCurrent(s, nextProcess);
 }
+
+
+void setNextProcessToCurrent(SCHEDULER *s, unsigned int nextProcess){
+
+}
+
+void setCurrentProcessToRunning(SCHEDULER *s){
+
+}
+
+void loadActiveProcessRegisters(SCHEDULER *s){
+
+}
+
+void updateSwitchedCPUTime(SCHEDULER *s){
+
+}
+
+void initializeProcessSwitchedCPUTime(SCHEDULER *s){
+
+}
+
+void incrementCurrentProcessSwitched(SCHEDULER *s){
+
+}
+
+void callProcessCodePtrStep(SCHEDULER *s){
+
+}
+
 
 ////Create a new scheduler
 ////This function needs to
