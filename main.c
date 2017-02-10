@@ -94,6 +94,7 @@ int main() {
     exec(s, pid, "p3", p3Init, p3Step, 668);
 
     
+    timer_interrupt(s);
 
 
 

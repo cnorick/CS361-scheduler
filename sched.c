@@ -18,6 +18,7 @@ void callProcessCodePtrStep(SCHEDULER *s);
 PID add_process(SCHEDULER *s, PROCESS *p);
 PROCESS *get_process(SCHEDULER *s, PID pid);
 PROCESS *getCurrentProcess(SCHEDULER *s);
+void updateAllProcesses(SCHEDULER *);
 
 
 //Simulate a timer interrupt from hardware. This should initiate
@@ -25,6 +26,7 @@ PROCESS *getCurrentProcess(SCHEDULER *s);
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
+    updateAllProcesses(s);
 	saveActiveProcessRegisters(s);
 	updateCurrentProcessTotalCPUTime(s);
 	updateAllProcessSleepTimeRemaining(s);
@@ -234,4 +236,19 @@ void callProcessCodePtrStep(SCHEDULER *s){
 
 PROCESS *getCurrentProcess(SCHEDULER *s) {
     return get_process(s, s->current + 1);
+}
+
+// Updates the switched_cpu_time of all processes.
+void updateAllProcesses(SCHEDULER *s) {
+    int i;
+    for(i = 0; i < MAX_PROCESSES; i++) {
+        PROCESS *p = s->process_list + i;
+
+        // Switched time is how long a process has been waiting. Update every process by one
+        p->switched_cpu_time++;
+
+        // If a process is sleeping, decrement its remaining sleep time.
+        if(p->state == PS_SLEEPING && p->sleep_time_remaining > 0)
+            p->sleep_time_remaining--;
+    }
 }
