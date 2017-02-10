@@ -1,6 +1,7 @@
 #include "sched.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 PID add_process(SCHEDULER *s, PROCESS *p);
 PROCESS *get_process(SCHEDULER *s, PID pid);
@@ -42,18 +43,19 @@ void timer_interrupt(SCHEDULER *s) {
 SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     // Create new scheduler.
     SCHEDULER *s = (SCHEDULER*) malloc(sizeof(SCHEDULER));
+    RETURN *r;
 
     // Create process 1.
-    PROCESS* init = (PROCESS*) malloc(sizeof(PROCESS));
-    init->name = "init";
-    init->pid = 1;
-    init->switched = 0;
-    init->total_cpu_time = 0;
-    init->switched_cpu_time = 0;
-    init->job_time = -1;
-    init->saved_registers = *((REGISTER_FILE*) malloc(sizeof(REGISTER_FILE)));
-    init->state = PS_NONE;
-    init->init = initCode;
+    PROCESS init;
+    init.name = "init";
+    init.pid = 1;
+    init.switched = 0;
+    init.total_cpu_time = 0;
+    init.switched_cpu_time = 0;
+    init.sleep_time_remaining = 0;
+    init.job_time = -1;
+    init.state = PS_NONE;
+    init.init = initCode;
 
     // Initialize process list with PS_NONE.
     PID i;
@@ -61,12 +63,12 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
         s->process_list[i].state = PS_NONE;
 
     // Load init into the scheculer and set it as running.
-    s->current = add_process(s, init); // Should add it at 0, returning pid 1.
-    s->active_registers = init->saved_registers;
+    s->current = add_process(s, &init) - 1; // Retruns pid. current needs the index into the array.
+    s->active_registers = init.saved_registers;
 
-    PROCESS *currentProcess = get_process(s, s->current);
+    PROCESS *currentProcess = get_process(s, s->current + 1);
     currentProcess->state = PS_RUNNING;
-    currentProcess->init(&s->active_registers, (RETURN*) malloc(sizeof(RETURN)));
+    currentProcess->init(&s->active_registers, r);
 
     return s;
 }
@@ -84,6 +86,7 @@ int fork(SCHEDULER *s, PID src_p) {
     child->switched = 0;
     child->total_cpu_time = 0;
     child->switched_cpu_time = 0;
+    child->sleep_time_remaining = 0;
 
     return child->pid;
 }
@@ -92,17 +95,25 @@ int fork(SCHEDULER *s, PID src_p) {
 ////This exec is called on any PID that IS NOT 1!
 ////exec overwrites the given process with the new name, init, and step
 int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PROCESS_CODE_PTR(step), int job_time) {
+    // Don't try to exec init.
     if(pid == 1)
         return -1;
     
+    // Get the process you want to exec.
     PROCESS *p = get_process(s, pid);
     if(p == NULL)
         return -1;
 
-    p->name = new_name;
+    // Reset all of the timers/counters.
+    p->switched = 0;
+    p->total_cpu_time = 0;
+    p->switched_cpu_time = 0;
+    p->sleep_time_remaining = 0;
+
+    // Replace old name and function pointers.
+    p->name = strdup(new_name);
     p->init = init;
     p->step = step;
-    
     p->job_time = job_time;
 }
 
@@ -117,10 +128,11 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
 
 // Adds a process to the scheduler in the first open process slot. Returns the pid of the new process (index + 1) or -1 if no slot was found.
 PID add_process(SCHEDULER *s, PROCESS *p) {
-    PID i;
+    int i;
     for(i = 0; i < MAX_PROCESSES; i++) {
         if(s->process_list[i].state == PS_NONE) {
             s->process_list[i] = *p;
+            s->process_list[i].pid = i + 1;
             return i + 1;
         }
     }
