@@ -4,21 +4,17 @@
 #include <string.h>
 
 void saveActiveProcessRegisters(SCHEDULER *s);
-void updateCurrentProcessTotalCPUTime(SCHEDULER *s);
-void updateAllProcessSleepTimeRemaining(SCHEDULER *s);
-void setCurrentProcessToSleeping(SCHEDULER *s);
 void setNewCurrentProcess(SCHEDULER *s);
 void setNextProcessToCurrent(SCHEDULER *s, unsigned int nextProcess);
-void setCurrentProcessToRunning(SCHEDULER *s);
 void loadActiveProcessRegisters(SCHEDULER *s);
-void updateSwitchedCPUTime(SCHEDULER *s);
-void initializeProcessSwitchedCPUTime(SCHEDULER *s);
-void incrementCurrentProcessSwitched(SCHEDULER *s);
-void callProcessCodePtrStep(SCHEDULER *s);
 PID add_process(SCHEDULER *s, PROCESS *p);
 PROCESS *get_process(SCHEDULER *s, PID pid);
 PROCESS *getCurrentProcess(SCHEDULER *s);
-void updateAllProcesses(SCHEDULER *);
+void updateAllProcesses(SCHEDULER *s, RETURN r);
+RETURN executeCurrentProcess(SCHEDULER *);
+void putProcessToSleep(SCHEDULER *s, PID pid, unsigned int sleep_time);
+void descheduleProcess(SCHEDULER *s, PID pid);
+void initialize_process(SCHEDULER *s, PID pid);
 
 
 //Simulate a timer interrupt from hardware. This should initiate
@@ -26,29 +22,13 @@ void updateAllProcesses(SCHEDULER *);
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
-    updateAllProcesses(s);
 	saveActiveProcessRegisters(s);
-	updateCurrentProcessTotalCPUTime(s);
-	updateAllProcessSleepTimeRemaining(s);
-	// setCurrentProcessToSleeping(s); maybe not?
-
-	unsigned int oldCurrentProcess = s -> current; 
-	
 	setNewCurrentProcess(s);
-
-	unsigned int newCurrentProcess = s -> current;
-	
-	// setCurrentProcessToRunning(s); maybe not?
 	loadActiveProcessRegisters(s);
 
-	if(newCurrentProcess == oldCurrentProcess){
-		updateSwitchedCPUTime(s);
-	}
-	else{
-		initializeProcessSwitchedCPUTime(s);
-		incrementCurrentProcessSwitched(s);
-		callProcessCodePtrStep(s);
-	}
+    RETURN r = executeCurrentProcess(s);
+    
+    updateAllProcesses(s, r);
 }
 
 
@@ -102,10 +82,7 @@ int fork(SCHEDULER *s, PID src_p) {
     PROCESS *child = get_process(s, newPid);
 
     // Reset all of the timers/counters for this new process.
-    child->switched = 0;
-    child->total_cpu_time = 0;
-    child->switched_cpu_time = 0;
-    child->sleep_time_remaining = 0;
+    initialize_process(s, newPid);
 
     return child->pid;
 }
@@ -123,11 +100,8 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
     if(p == NULL)
         return -1;
 
-    // Reset all of the timers/counters.
-    p->switched = 0;
-    p->total_cpu_time = 0;
-    p->switched_cpu_time = 0;
-    p->sleep_time_remaining = 0;
+    // Reset counters.
+    initialize_process(s, pid);
 
     // Replace old name and function pointers.
     p->name = strdup(new_name);
@@ -173,18 +147,6 @@ void saveActiveProcessRegisters(SCHEDULER *s){
     pCur->saved_registers = s->active_registers;
 }
 
-void updateCurrentProcessTotalCPUTime(SCHEDULER *s){
-
-}
-
-void updateAllProcessSleepTimeRemaining(SCHEDULER *s){
-
-}
-
-void setCurrentProcessToSleeping(SCHEDULER *s){
-
-}
-
 // all this does is choose set s -> current
 // to what the next process should be
 void setNewCurrentProcess(SCHEDULER *s){
@@ -218,37 +180,98 @@ void loadActiveProcessRegisters(SCHEDULER *s){
 
 }
 
-void updateSwitchedCPUTime(SCHEDULER *s){
-
-}
-
-void initializeProcessSwitchedCPUTime(SCHEDULER *s){
-
-}
-
-void incrementCurrentProcessSwitched(SCHEDULER *s){
-
-}
-
-void callProcessCodePtrStep(SCHEDULER *s){
-
-}
 
 PROCESS *getCurrentProcess(SCHEDULER *s) {
     return get_process(s, s->current + 1);
 }
 
-// Updates the switched_cpu_time of all processes.
-void updateAllProcesses(SCHEDULER *s) {
+// Updates the switched_cpu_time of all processes but the current, the sleep_time_remaining
+// of sleeping process, and the total time for the current process. These values are
+// incremented by elapsedTime. It also updates all the processes to be in the appropriate
+// state.
+void updateAllProcesses(SCHEDULER *s, RETURN r) {
     int i;
     for(i = 0; i < MAX_PROCESSES; i++) {
         PROCESS *p = s->process_list + i;
 
-        // Switched time is how long a process has been waiting. Update every process by one
-        p->switched_cpu_time++;
+        
+        // These processes don't exist.
+        if(p->state == PS_NONE)
+            continue;
 
-        // If a process is sleeping, decrement its remaining sleep time.
-        if(p->state == PS_SLEEPING && p->sleep_time_remaining > 0)
-            p->sleep_time_remaining--;
+
+        // This is the currently scheduled process.
+        else if(p->pid == s->current + 1) {
+            if(r.state == PS_SLEEPING)
+                putProcessToSleep(s, p->pid, r.sleep_time);
+
+            else if(r.state == PS_EXITED)
+                descheduleProcess(s, p->pid);
+
+            else { // Process is still running
+                // Increment elapsed time.
+                p->total_cpu_time += r.cpu_time_taken;
+
+                // Reset switched time since this one just ran.
+                p->switched_cpu_time = 0;
+            }
+            continue;
+        }
+
+
+        // All other processes
+        else {
+            // Switched time is how long a process has been waiting.
+            p->switched_cpu_time += r.cpu_time_taken;
+
+            // If a process is sleeping, decrement its remaining sleep time.
+            if(p->state == PS_SLEEPING && p->sleep_time_remaining > 0)
+                // Decrement sleep_time_rmaining by elapsedTime, with the
+                // min possible being 0;
+                p->sleep_time_remaining = (p->sleep_time_remaining - r.cpu_time_taken > 0)
+                    ? p->sleep_time_remaining - r.cpu_time_taken
+                    : 0;
+        }
     }
+}
+
+// Executes either step or init depending on whether or not the process has been run before.
+RETURN executeCurrentProcess(SCHEDULER *s) {
+    PROCESS *p = getCurrentProcess(s);
+    RETURN r;
+
+    if(p->total_cpu_time == 0)
+        p->init(&s->active_registers, &r);
+    else
+        p->step(&s->active_registers, &r);
+
+    return r;
+}
+
+void descheduleProcess(SCHEDULER *s, PID pid) {
+    PROCESS *p = get_process(s, pid);
+    if(pid == 1) {
+        perror("Cannot deschedule init!");
+        exit(1);
+    }
+
+    p->state = PS_NONE;
+}
+
+void putProcessToSleep(SCHEDULER *s, PID pid, unsigned int sleep_time) {
+    PROCESS *p = get_process(s, pid);
+
+    p->state = PS_SLEEPING;
+    p->sleep_time_remaining = sleep_time;
+}
+
+// Initialize all of the process timers to zero.
+void initialize_process(SCHEDULER *s, PID pid) {
+    PROCESS *p = get_process(s, pid);
+
+    // Reset all of the timers/counters.
+    p->switched = 0;
+    p->total_cpu_time = 0;
+    p->switched_cpu_time = 0;
+    p->sleep_time_remaining = 0;
 }
