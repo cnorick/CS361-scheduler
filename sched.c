@@ -17,6 +17,7 @@ void incrementCurrentProcessSwitched(SCHEDULER *s);
 void callProcessCodePtrStep(SCHEDULER *s);
 PID add_process(SCHEDULER *s, PROCESS *p);
 PROCESS *get_process(SCHEDULER *s, PID pid);
+PROCESS *getCurrentProcess(SCHEDULER *s);
 
 
 //Simulate a timer interrupt from hardware. This should initiate
@@ -82,7 +83,7 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     s->current = add_process(s, &init) - 1; // Retruns pid. current needs the index into the array.
     s->active_registers = init.saved_registers;
 
-    PROCESS *currentProcess = get_process(s, s->current + 1);
+    PROCESS *currentProcess = getCurrentProcess(s);
     currentProcess->state = PS_RUNNING;
     currentProcess->init(&s->active_registers, r);
 
@@ -166,7 +167,8 @@ PROCESS *get_process(SCHEDULER *s, PID pid) {
 }
 
 void saveActiveProcessRegisters(SCHEDULER *s){
-
+    PROCESS *pCur = getCurrentProcess(s);
+    pCur->saved_registers = s->active_registers;
 }
 
 void updateCurrentProcessTotalCPUTime(SCHEDULER *s){
@@ -228,4 +230,8 @@ void incrementCurrentProcessSwitched(SCHEDULER *s){
 
 void callProcessCodePtrStep(SCHEDULER *s){
 
+}
+
+PROCESS *getCurrentProcess(SCHEDULER *s) {
+    return get_process(s, s->current + 1);
 }
