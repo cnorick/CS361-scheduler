@@ -15,6 +15,7 @@ RETURN executeCurrentProcess(SCHEDULER *);
 void putProcessToSleep(SCHEDULER *s, PID pid, unsigned int sleep_time);
 void descheduleProcess(SCHEDULER *s, PID pid);
 void initialize_process(SCHEDULER *s, PID pid);
+int getNumValidProcesses(SCHEDULER *s);
 
 
 //Simulate a timer interrupt from hardware. This should initiate
@@ -22,8 +23,14 @@ void initialize_process(SCHEDULER *s, PID pid);
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
+    // If we only have init scheduled...
+    if(getNumValidProcesses(s) == 0)
+        return;
+
 	saveActiveProcessRegisters(s);
+    
 	setNewCurrentProcess(s);
+
 	loadActiveProcessRegisters(s);
 
     RETURN r = executeCurrentProcess(s);
@@ -42,7 +49,7 @@ void timer_interrupt(SCHEDULER *s) {
 SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     // Create new scheduler.
     SCHEDULER *s = (SCHEDULER*) malloc(sizeof(SCHEDULER));
-    RETURN *r;
+    RETURN r;
 
     // Create process 1.
     PROCESS init;
@@ -67,7 +74,7 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
 
     PROCESS *currentProcess = getCurrentProcess(s);
     currentProcess->state = PS_RUNNING;
-    currentProcess->init(&s->active_registers, r);
+    currentProcess->init(&s->active_registers, &r);
 
     return s;
 }
@@ -149,6 +156,7 @@ void saveActiveProcessRegisters(SCHEDULER *s){
 
 // all this does is choose set s -> current
 // to what the next process should be
+// Never set it to init!
 void setNewCurrentProcess(SCHEDULER *s){
 	switch(s -> scheduler_algorithm){
 		case SA_ROUND_ROBIN:
@@ -163,6 +171,8 @@ void setNewCurrentProcess(SCHEDULER *s){
 			// maybe output an error?
 			break;
 	}
+
+    s->current ++;
 
 	// setNextProcessToCurrent(s, nextProcess);
 }
@@ -214,6 +224,8 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
 
                 // Reset switched time since this one just ran.
                 p->switched_cpu_time = 0;
+
+                p->switched++;
             }
             continue;
         }
@@ -225,12 +237,14 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
             p->switched_cpu_time += r.cpu_time_taken;
 
             // If a process is sleeping, decrement its remaining sleep time.
-            if(p->state == PS_SLEEPING && p->sleep_time_remaining > 0)
-                // Decrement sleep_time_rmaining by elapsedTime, with the
-                // min possible being 0;
-                p->sleep_time_remaining = (p->sleep_time_remaining - r.cpu_time_taken > 0)
-                    ? p->sleep_time_remaining - r.cpu_time_taken
-                    : 0;
+            if(p->state == PS_SLEEPING) {
+                // Decrement sleep_time_rmaining by elapsedTime.
+                p->sleep_time_remaining -= r.cpu_time_taken;
+
+                // Update its state if its sleep_time has elapsed.
+                if(p->sleep_time_remaining <= 0)
+                    p->state = PS_RUNNING;
+            }
         }
     }
 }
@@ -274,4 +288,14 @@ void initialize_process(SCHEDULER *s, PID pid) {
     p->total_cpu_time = 0;
     p->switched_cpu_time = 0;
     p->sleep_time_remaining = 0;
+}
+
+// Return the number of running processes not including init.
+// i.e. the number of options the scheduler has to switch to.
+int getNumValidProcesses(SCHEDULER *s) {
+    int num = 0, i;
+    for(i = 1; i < MAX_PROCESSES; i++)
+        num += (s->process_list[i].state == PS_RUNNING ? 1 : 0);
+
+    return num;
 }
