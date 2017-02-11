@@ -16,6 +16,10 @@ void putProcessToSleep(SCHEDULER *s, PID pid, unsigned int sleep_time);
 void descheduleProcess(SCHEDULER *s, PID pid);
 void initialize_process(SCHEDULER *s, PID pid);
 int getNumValidProcesses(SCHEDULER *s);
+PID roundRobin(SCHEDULER *s);
+PID fair(SCHEDULER *s);
+PID fcfs(SCHEDULER *s);
+PID sjf(SCHEDULER *s);
 
 
 //Simulate a timer interrupt from hardware. This should initiate
@@ -118,8 +122,25 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
 }
 
 
+/**************
+ * Algorithms *
+ **************/
 
+PID roundRobin(SCHEDULER *s) {
 
+}
+
+PID fair(SCHEDULER *s) {
+
+}
+
+PID fcfs(SCHEDULER *s) {
+    
+}
+
+PID sjf(SCHEDULER *s) {
+
+}
 
 
 /********************
@@ -158,23 +179,25 @@ void saveActiveProcessRegisters(SCHEDULER *s){
 // to what the next process should be
 // Never set it to init!
 void setNewCurrentProcess(SCHEDULER *s){
+    PID pid = 0;
+
 	switch(s -> scheduler_algorithm){
 		case SA_ROUND_ROBIN:
+            pid = roundRobin(s);
 			break;
 		case SA_FAIR:
+            pid = fair(s);
 			break;
 		case SA_FCFS:
+            pid = fcfs(s);
 			break;
 		case SA_SJF:
-			break;
-		default:
-			// maybe output an error?
+            pid = sjf(s);
 			break;
 	}
 
-    s->current ++;
-
-	// setNextProcessToCurrent(s, nextProcess);
+	// Set Next Process To Current.
+    s->current = pid - 1;
 }
 
 
