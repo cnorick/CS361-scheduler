@@ -126,8 +126,28 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
  * Algorithms *
  **************/
 
-PID roundRobin(SCHEDULER *s) {
+// It doesn't work if only init is scheculed.
+PID roundRobin(SCHEDULER *s) {   
+    int i;
+    PROCESS p;
 
+    for(i = s->current + 1; i < MAX_PROCESSES; i++) {
+        p = s->process_list[i];
+
+        if(p.state == PS_RUNNING)
+            return p.pid;
+    }
+    // Start at one past init.
+    for(i = 1; i < s->current; i++) {
+        p = s->process_list[i];
+
+        if(p.state == PS_RUNNING)
+            return p.pid;
+    }
+
+    // Return init if nothing can be scheduled.
+    // No valid processes. We catch this already at the top of timer_interrupt.
+    return -1;
 }
 
 PID fair(SCHEDULER *s) {
@@ -195,6 +215,11 @@ void setNewCurrentProcess(SCHEDULER *s){
             pid = sjf(s);
 			break;
 	}
+    
+    // The algorithms return -1 if nothing can be scheduled. But we check for
+    // that at the top of timer_interrupt.
+    if(pid == -1)
+        return;
 
 	// Set Next Process To Current.
     s->current = pid - 1;
