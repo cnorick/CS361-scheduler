@@ -28,14 +28,14 @@ PID sjf(SCHEDULER *s);
 void timer_interrupt(SCHEDULER *s) {
     // If we only have init scheduled...
     if(getNumValidProcesses(s) == 0)
-        return;
+        s->current = 0;
 
 	saveActiveProcessRegisters(s);
     
 	setNewCurrentProcess(s);
 
 	loadActiveProcessRegisters(s);
-
+    
     RETURN r = executeCurrentProcess(s);
     
     updateAllProcesses(s, r);
@@ -150,15 +150,27 @@ PID roundRobin(SCHEDULER *s) {
 }
 
 PID fair(SCHEDULER *s) {
-
-}
-
-PID fcfs(SCHEDULER *s) {
+    // Get list of starving processes.
+    //
+    // If there are none, add all processes to that list.
+    //
+    // Then pick the one with the least cpu_time thus far.
     
 }
 
-PID sjf(SCHEDULER *s) {
+PID fcfs(SCHEDULER *s) {
+    PROCESS* p = getCurrentProcess(s);
+    
+    // Keep scheduling the same process until it's done.
+    // Then pick the next one using round robin.
+    if(p->state == PS_RUNNING && p->pid != 1)
+        return p->pid;
+    else
+        return roundRobin(s);
+}
 
+PID sjf(SCHEDULER *s) {
+    
 }
 
 
@@ -249,24 +261,26 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
         if(p->state == PS_NONE)
             continue;
 
+        if(p->state == PS_EXITED)
+            p->state = PS_NONE;
 
         // This is the currently scheduled process.
         else if(p->pid == s->current + 1) {
             if(r.state == PS_SLEEPING)
                 putProcessToSleep(s, p->pid, r.sleep_time);
 
-            else if(r.state == PS_EXITED)
-                descheduleProcess(s, p->pid);
-
-            else { // Process is still running
-                // Increment elapsed time.
-                p->total_cpu_time += r.cpu_time_taken;
-
-                // Reset switched time since this one just ran.
-                p->switched_cpu_time = 0;
-
-                p->switched++;
+            else if(r.state == PS_EXITED) {
+                p->state = PS_EXITED;
+                //descheduleProcess(s, p->pid);
             }
+
+            // Increment elapsed time.
+            p->total_cpu_time += r.cpu_time_taken;
+
+            // Reset switched time since this one just ran.
+            p->switched_cpu_time = 0;
+
+            p->switched++;
             continue;
         }
 
@@ -290,12 +304,15 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
 }
 
 // Executes either step or init depending on whether or not the process has been run before.
+// returns null if trying to execute exec on init.
 RETURN executeCurrentProcess(SCHEDULER *s) {
     PROCESS *p = getCurrentProcess(s);
     RETURN r;
 
     if(p->total_cpu_time == 0)
         p->init(&s->active_registers, &r);
+    else if(p->pid == 1)
+        return NULL;
     else
         p->step(&s->active_registers, &r);
 
