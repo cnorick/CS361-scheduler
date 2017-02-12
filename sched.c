@@ -26,18 +26,18 @@ PID sjf(SCHEDULER *s);
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
-    // If we only have init scheduled...
+    // If we only have init scheduled, set current to init.
     if(getNumValidProcesses(s) == 0)
         s->current = 0;
 
-	saveActiveProcessRegisters(s);
-    
-	setNewCurrentProcess(s);
+    saveActiveProcessRegisters(s);
 
-	loadActiveProcessRegisters(s);
-    
+    setNewCurrentProcess(s);
+
+    loadActiveProcessRegisters(s);
+
     RETURN r = executeCurrentProcess(s);
-    
+
     updateAllProcesses(s, r);
 }
 
@@ -256,11 +256,11 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
     for(i = 0; i < MAX_PROCESSES; i++) {
         PROCESS *p = s->process_list + i;
 
-        
         // These processes don't exist.
         if(p->state == PS_NONE)
             continue;
 
+        // Clean up processes that have exited.
         if(p->state == PS_EXITED)
             p->state = PS_NONE;
 
@@ -269,10 +269,8 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
             if(r.state == PS_SLEEPING)
                 putProcessToSleep(s, p->pid, r.sleep_time);
 
-            else if(r.state == PS_EXITED) {
+            else if(r.state == PS_EXITED)
                 p->state = PS_EXITED;
-                //descheduleProcess(s, p->pid);
-            }
 
             // Increment elapsed time.
             p->total_cpu_time += r.cpu_time_taken;
@@ -309,10 +307,13 @@ RETURN executeCurrentProcess(SCHEDULER *s) {
     PROCESS *p = getCurrentProcess(s);
     RETURN r;
 
-    if(p->total_cpu_time == 0)
+    // If process 1, return cpu_time_taken as 1 and state as running.
+    if(p->pid == 1) {
+        r.state = PS_RUNNING;
+        r.cpu_time_taken = 1;
+    }
+    else if(p->total_cpu_time == 0)
         p->init(&s->active_registers, &r);
-    else if(p->pid == 1)
-        return NULL;
     else
         p->step(&s->active_registers, &r);
 
