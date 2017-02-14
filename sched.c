@@ -261,17 +261,13 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
         if(p->state == PS_NONE)
             continue;
 
-        if(p->state == PS_EXITED)
-            p->state = PS_NONE;
-
         // This is the currently scheduled process.
         else if(p->pid == s->current + 1) {
             if(r.state == PS_SLEEPING)
                 putProcessToSleep(s, p->pid, r.sleep_time);
 
             else if(r.state == PS_EXITED) {
-                p->state = PS_EXITED;
-                //descheduleProcess(s, p->pid);
+                descheduleProcess(s, p->pid);
             }
 
             // Increment elapsed time.
@@ -311,8 +307,6 @@ RETURN executeCurrentProcess(SCHEDULER *s) {
 
     if(p->total_cpu_time == 0)
         p->init(&s->active_registers, &r);
-    else if(p->pid == 1)
-        return NULL;
     else
         p->step(&s->active_registers, &r);
 
