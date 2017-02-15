@@ -11,8 +11,8 @@ void fcfs_step(REGISTER_FILE *regs, RETURN *r) {
 
     regs->r0--;
 
-    if(regs->r0 == 0)
-        r->state = PS_EXITED;
+//    if(regs->r0 == 0)
+        //r->state = PS_EXITED;
 }
 
 void fcfs_init(REGISTER_FILE *regs, RETURN *r) {

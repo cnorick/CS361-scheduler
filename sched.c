@@ -134,7 +134,6 @@ PID roundRobin(SCHEDULER *s) {
         if(p.state == PS_RUNNING)
             return p.pid;
     }
-    // Start at one past init.
     for(i = 0; i < s->current; i++) {
         p = s->process_list[i];
 
@@ -143,7 +142,7 @@ PID roundRobin(SCHEDULER *s) {
     }
 
     // No valid processes. We catch this already at the top of timer_interrupt.
-    return -1;
+    return MAX_PROCESSES;
 }
 
 PID fair(SCHEDULER *s) {
@@ -274,13 +273,6 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
         // If nothing was scheduled (current is MAX_PROCESSES), we'll never
         // reach the current process.
         else if(p->pid == s->current + 1) {
-            if(r.state == PS_SLEEPING)
-                putProcessToSleep(s, p->pid, r.sleep_time);
-
-            else if(r.state == PS_EXITED) {
-                descheduleProcess(s, p->pid);
-            }
-
             // Increment elapsed time.
             p->total_cpu_time += r.cpu_time_taken;
 
@@ -288,6 +280,14 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
             p->switched_cpu_time = 0;
 
             p->switched++;
+
+            if(r.state == PS_SLEEPING)
+                putProcessToSleep(s, p->pid, r.sleep_time);
+
+            else if(r.state == PS_EXITED || (p->job_time != -1 && p->total_cpu_time >= p->job_time)) {
+                descheduleProcess(s, p->pid);
+            }
+
             continue;
         }
 
