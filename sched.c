@@ -26,18 +26,20 @@ PID sjf(SCHEDULER *s);
 //// - Context switch must save active process' state into the PROCESS structure
 //// - Context switch must load the next process' state into the scheduler
 void timer_interrupt(SCHEDULER *s) {
-    // If we only have init scheduled...
-    if(getNumValidProcesses(s) == 0)
-        s->current = 0;
-
+    RETURN r; 
+    
 	saveActiveProcessRegisters(s);
     
+    // Sets current to MAX_PROCESSES if no process can be scehduled.
 	setNewCurrentProcess(s);
 
-	loadActiveProcessRegisters(s);
-    
-    RETURN r = executeCurrentProcess(s);
-    
+    if(s->current == MAX_PROCESSES)
+        r.cpu_time_taken = 1;
+    else {
+        loadActiveProcessRegisters(s);
+        r = executeCurrentProcess(s);
+    }
+
     updateAllProcesses(s, r);
 }
 
@@ -52,7 +54,6 @@ void timer_interrupt(SCHEDULER *s) {
 SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     // Create new scheduler.
     SCHEDULER *s = (SCHEDULER*) malloc(sizeof(SCHEDULER));
-    RETURN r;
 
     // Create process 1.
     PROCESS init;
@@ -63,8 +64,9 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     init.switched_cpu_time = 0;
     init.sleep_time_remaining = 0;
     init.job_time = -1;
-    init.state = PS_NONE;
+    init.state = PS_RUNNING;
     init.init = initCode;
+    init.step = initCode;
 
     // Initialize process list with PS_NONE.
     PID i;
@@ -72,12 +74,9 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
         s->process_list[i].state = PS_NONE;
 
     // Load init into the scheculer and set it as running.
-    s->current = addProcess(s, &init) - 1; // Retruns pid. current needs the index into the array.
-    s->active_registers = init.saved_registers;
+    addProcess(s, &init);
 
-    PROCESS *currentProcess = getCurrentProcess(s);
-    currentProcess->state = PS_RUNNING;
-    currentProcess->init(&s->active_registers, &r);
+    s->current = MAX_PROCESSES;
 
     return s;
 }
@@ -125,7 +124,6 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
  * Algorithms *
  **************/
 
-// It doesn't work if only init is scheculed.
 PID roundRobin(SCHEDULER *s) {   
     int i;
     PROCESS p;
@@ -137,14 +135,13 @@ PID roundRobin(SCHEDULER *s) {
             return p.pid;
     }
     // Start at one past init.
-    for(i = 1; i < s->current; i++) {
+    for(i = 0; i < s->current; i++) {
         p = s->process_list[i];
 
         if(p.state == PS_RUNNING)
             return p.pid;
     }
 
-    // Return init if nothing can be scheduled.
     // No valid processes. We catch this already at the top of timer_interrupt.
     return -1;
 }
@@ -159,14 +156,18 @@ PID fair(SCHEDULER *s) {
 }
 
 PID fcfs(SCHEDULER *s) {
-    PROCESS* p = getCurrentProcess(s);
+    int i; 
+    for(i = 1; i < MAX_PROCESSES; i++) {
+        PROCESS* p = &s->process_list[i];
+
+        // Return the first process that is running.
+        // This keeps the current process if it still isn't done.
+        if(p->state == PS_RUNNING)
+            return p->pid;
+    }
     
-    // Keep scheduling the same process until it's done.
-    // Then pick the next one using round robin.
-    if(p->state == PS_RUNNING && p->pid != 1)
-        return p->pid;
-    else
-        return roundRobin(s);
+    // If none are running.
+    return MAX_PROCESSES;
 }
 
 PID sjf(SCHEDULER *s) {
@@ -194,7 +195,7 @@ PID addProcess(SCHEDULER *s, PROCESS *p) {
 
 // Returns the PROCESS with processId pid.
 PROCESS *getProcess(SCHEDULER *s, PID pid) {
-    if(pid > MAX_PROCESSES)
+    if(pid > MAX_PROCESSES || pid < 1)
         return NULL;
 
     // process id is 1-based. array is 0-based.
@@ -202,8 +203,9 @@ PROCESS *getProcess(SCHEDULER *s, PID pid) {
 }
 
 // all this does is choose set s -> current
-// to what the next process should be
-// Never set it to init!
+// to what the next process should be.
+// If nothing can be scheduled, sets current
+// to MAX_PROCESSES. 
 void setNewCurrentProcess(SCHEDULER *s){
     PID pid = 0;
 
@@ -222,10 +224,11 @@ void setNewCurrentProcess(SCHEDULER *s){
 			break;
 	}
     
-    // The algorithms return -1 if nothing can be scheduled. But we check for
-    // that at the top of timer_interrupt.
-    if(pid == -1)
+    // The algorithms return -1 if nothing can be scheduled.
+    if(pid == -1) {
+        s->current = MAX_PROCESSES;
         return;
+    }
 
 	// Set Next Process To Current.
     s->current = pid - 1;
@@ -234,11 +237,17 @@ void setNewCurrentProcess(SCHEDULER *s){
 
 void saveActiveProcessRegisters(SCHEDULER *s){
     PROCESS *pCur = getCurrentProcess(s);
+    if(pCur == NULL)
+        return;
+    
     pCur->saved_registers = s->active_registers;
 }
 
 void loadActiveProcessRegisters(SCHEDULER *s){
     PROCESS *pCur = getCurrentProcess(s);
+    if(pCur == NULL)
+        return;
+
     s->active_registers = pCur->saved_registers;
 }
 
@@ -262,6 +271,8 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
             continue;
 
         // This is the currently scheduled process.
+        // If nothing was scheduled (current is MAX_PROCESSES), we'll never
+        // reach the current process.
         else if(p->pid == s->current + 1) {
             if(r.state == PS_SLEEPING)
                 putProcessToSleep(s, p->pid, r.sleep_time);
@@ -300,7 +311,6 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
 }
 
 // Executes either step or init depending on whether or not the process has been run before.
-// returns null if trying to execute exec on init.
 RETURN executeCurrentProcess(SCHEDULER *s) {
     PROCESS *p = getCurrentProcess(s);
     RETURN r;
