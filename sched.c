@@ -191,6 +191,23 @@ PID fcfs(SCHEDULER *s) {
 }
 
 PID sjf(SCHEDULER *s) {   
+    int i;
+    PROCESS *shortest = NULL;
+
+    for(i = 1; i < MAX_PROCESSES; i++) {
+        PROCESS *p = &s->process_list[i];
+
+        if(p->state != PS_RUNNING)
+            continue;
+        
+        if(shortest == NULL)
+            shortest = p;
+
+        if(p->job_time < shortest->job_time)
+            shortest = p;
+    }
+    
+    return shortest == NULL ? MAX_PROCESSES : shortest->pid;
 }
 
 
