@@ -146,12 +146,33 @@ PID roundRobin(SCHEDULER *s) {
 }
 
 PID fair(SCHEDULER *s) {
-    // Get list of starving processes.
-    //
-    // If there are none, add all processes to that list.
-    //
-    // Then pick the one with the least cpu_time thus far.
+    int i;
+    PROCESS *min = NULL;
+
+    for(i = 0; i < MAX_PROCESSES; i++) {
+        PROCESS *p = &s->process_list[i];
+
+        if(p->state != PS_RUNNING)
+            continue;
+        
+        if(min == NULL)
+            min = p;
+
+        double pTime = 
+            p->switched_cpu_time == 0 ?
+            (double)p->total_cpu_time :
+            (double)p->total_cpu_time / (double)p->switched_cpu_time;
+
+        double minTime = 
+            min->switched_cpu_time == 0 ?
+            (double)min->total_cpu_time :
+            (double)min->total_cpu_time / (double)min->switched_cpu_time;
+
+        if(pTime < minTime)
+            min = p;
+    }
     
+    return min == NULL ? MAX_PROCESSES : min->pid;
 }
 
 PID fcfs(SCHEDULER *s) {
@@ -169,8 +190,7 @@ PID fcfs(SCHEDULER *s) {
     return MAX_PROCESSES;
 }
 
-PID sjf(SCHEDULER *s) {
-    
+PID sjf(SCHEDULER *s) {   
 }
 
 

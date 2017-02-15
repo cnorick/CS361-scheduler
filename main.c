@@ -92,7 +92,8 @@ void p3Step(REGISTER_FILE *regs, RETURN *r) {
 
 int main() {
 //    roundRobinTest();
-    fcfsTest();
+//    fcfsTest();
+    fairTest();
 /*
     printf("Making scheduler\n");
 	SCHEDULER *s = new_scheduler(init);
