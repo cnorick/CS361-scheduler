@@ -91,8 +91,14 @@ void p3Step(REGISTER_FILE *regs, RETURN *r) {
 
 
 int main() {
+//    roundRobinTest();
+//    fcfsTest();
+//    fairTest();
+    sjfTest();
+/*
     printf("Making scheduler\n");
 	SCHEDULER *s = new_scheduler(init);
+    s->scheduler_algorithm = SA_ROUND_ROBIN;
 
     printf("Calling timer_interrupt with no processes scheduled\n");
     timer_interrupt(s);
@@ -136,7 +142,7 @@ int main() {
 	list_processes(s);
 	printf("\n");
 
-
+*/
 
 	return 0;
 }
