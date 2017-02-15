@@ -301,7 +301,6 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
     for(i = 0; i < MAX_PROCESSES; i++) {
         PROCESS *p = s->process_list + i;
 
-        
         // These processes don't exist.
         if(p->state == PS_NONE)
             continue;
@@ -352,7 +351,12 @@ RETURN executeCurrentProcess(SCHEDULER *s) {
     PROCESS *p = getCurrentProcess(s);
     RETURN r;
 
-    if(p->total_cpu_time == 0)
+    // If process 1, return cpu_time_taken as 1 and state as running.
+    if(p->pid == 1) {
+        r.state = PS_RUNNING;
+        r.cpu_time_taken = 1;
+    }
+    else if(p->total_cpu_time == 0)
         p->init(&s->active_registers, &r);
     else
         p->step(&s->active_registers, &r);
