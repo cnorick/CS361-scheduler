@@ -128,6 +128,7 @@ PID roundRobin(SCHEDULER *s) {
     int i;
     PROCESS p;
 
+    // Check all processes except current first.
     for(i = s->current + 1; i < MAX_PROCESSES; i++) {
         p = s->process_list[i];
 
@@ -140,6 +141,11 @@ PID roundRobin(SCHEDULER *s) {
         if(p.state == PS_RUNNING)
             return p.pid;
     }
+
+    // If none of the other process are available to run, schedule current.
+    p = *getCurrentProcess(s);
+    if(p.state == PS_RUNNING)
+        return p.pid;
 
     // No valid processes. We catch this already at the top of timer_interrupt.
     return MAX_PROCESSES + 1;
