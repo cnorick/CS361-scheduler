@@ -142,7 +142,7 @@ PID roundRobin(SCHEDULER *s) {
     }
 
     // No valid processes. We catch this already at the top of timer_interrupt.
-    return MAX_PROCESSES;
+    return MAX_PROCESSES + 1;
 }
 
 PID fair(SCHEDULER *s) {
@@ -172,7 +172,7 @@ PID fair(SCHEDULER *s) {
             min = p;
     }
     
-    return min == NULL ? MAX_PROCESSES : min->pid;
+    return min == NULL ? MAX_PROCESSES + 1 : min->pid;
 }
 
 PID fcfs(SCHEDULER *s) {
@@ -187,7 +187,7 @@ PID fcfs(SCHEDULER *s) {
     }
     
     // If none are running.
-    return MAX_PROCESSES;
+    return MAX_PROCESSES + 1;
 }
 
 PID sjf(SCHEDULER *s) {   
@@ -207,7 +207,7 @@ PID sjf(SCHEDULER *s) {
             shortest = p;
     }
     
-    return shortest == NULL ? MAX_PROCESSES : shortest->pid;
+    return shortest == NULL ? MAX_PROCESSES + 1 : shortest->pid;
 }
 
 
@@ -260,12 +260,6 @@ void setNewCurrentProcess(SCHEDULER *s){
 			break;
 	}
     
-    // The algorithms return -1 if nothing can be scheduled.
-    if(pid == -1) {
-        s->current = MAX_PROCESSES;
-        return;
-    }
-
 	// Set Next Process To Current.
     s->current = pid - 1;
 }

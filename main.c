@@ -7,15 +7,18 @@
 
 int main() {
     printf("\n\n===================Testing Round Robin=====================\n\n");
-//    roundRobinTest();
+    roundRobinTest();
     printf("\n\n===================Testing FCFS============================\n\n");
 //    fcfsTest();
     printf("\n\n===================Testing Fair============================\n\n");
-    fairTest();
+//    fairTest();
     printf("\n\n===================Testing SJF============================\n\n");
 //    sjfTest();
     printf("\n\n===================Testing Registers============================\n\n");
-    registerTest();
+ //   registerTest();
+    printf("\n\n===================Testing Sleeping============================\n\n");
+//    sleepTest();
+ 
 
 	return 0;
 }
