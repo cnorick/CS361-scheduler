@@ -45,7 +45,7 @@ int roundRobinTest() {
     }
 
     
-    for(i = 0; i < (MAX_PROCESSES - 1) * 3; i++) {
+    for(i = 0; i < (MAX_PROCESSES - 1) * 4; i++) {
         timer_interrupt(s);
         list_processes(s);
         printf("\n");
