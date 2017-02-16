@@ -29,8 +29,6 @@ void rr_init(REGISTER_FILE *regs, RETURN *r) {
 }
 
 int roundRobinTest() {
-    printf("Testing Round Robin\n\n");
-
 	SCHEDULER *s = new_scheduler(init_code);
     s->scheduler_algorithm = SA_ROUND_ROBIN;
     
