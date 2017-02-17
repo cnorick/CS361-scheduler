@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define INVALID_PID MAX_PROCESSES + 1
+
 void saveActiveProcessRegisters(SCHEDULER *s);
 void setNewCurrentProcess(SCHEDULER *s);
 void loadActiveProcessRegisters(SCHEDULER *s);
@@ -88,6 +90,9 @@ int fork(SCHEDULER *s, PID src_p) {
     PROCESS *parent = getProcess(s, src_p);
 
     PID newPid = addProcess(s, parent);
+    if(newPid == INVALID_PID)
+        return -1;
+
     PROCESS *child = getProcess(s, newPid);
 
     // Reset all of the timers/counters for this new process.
@@ -237,7 +242,7 @@ PID addProcess(SCHEDULER *s, PROCESS *p) {
         }
     }
 
-    return -1;
+    return INVALID_PID;
 }
 
 // Returns the PROCESS with processId pid.

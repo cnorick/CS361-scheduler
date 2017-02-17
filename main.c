@@ -17,7 +17,9 @@ int main() {
     printf("\n\n===================Testing Registers============================\n\n");
 //    registerTest();
     printf("\n\n===================Testing Sleeping============================\n\n");
-    sleepTest();
+//    sleepTest();
+    printf("\n\n===================Testing Exiting and Adding More============================\n\n");
+    exitTest();
  
 
 	return 0;
