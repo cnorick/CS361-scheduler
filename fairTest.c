@@ -38,8 +38,6 @@ void cpuHeavyStep(REGISTER_FILE *regs, RETURN *r) {
 
 
 int fairTest() {
-    printf("Testing Round Robin\n\n");
-
 	SCHEDULER *s = new_scheduler(f_init);
     s->scheduler_algorithm = SA_FAIR;
     
@@ -50,7 +48,9 @@ int fairTest() {
 
         printf("Fork and exec %s\n", name);
         PID pid = fork(s, 1);
-        exec(s, pid, name, f_init, i == 3 ? cpuHeavyStep : f_step, -1);
+
+        // Make every 3rd process use extra cpu.
+        exec(s, pid, name, f_init, i % 3 == 0 ? cpuHeavyStep : f_step, -1);
         list_processes(s);
         printf("\n");
     }

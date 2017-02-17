@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define INVALID_PID MAX_PROCESSES + 1
+
 void saveActiveProcessRegisters(SCHEDULER *s);
 void setNewCurrentProcess(SCHEDULER *s);
 void loadActiveProcessRegisters(SCHEDULER *s);
@@ -88,6 +90,9 @@ int fork(SCHEDULER *s, PID src_p) {
     PROCESS *parent = getProcess(s, src_p);
 
     PID newPid = addProcess(s, parent);
+    if(newPid == INVALID_PID)
+        return -1;
+
     PROCESS *child = getProcess(s, newPid);
 
     // Reset all of the timers/counters for this new process.
@@ -128,6 +133,7 @@ PID roundRobin(SCHEDULER *s) {
     int i;
     PROCESS p;
 
+    // Check all processes except current first.
     for(i = s->current + 1; i < MAX_PROCESSES; i++) {
         p = s->process_list[i];
 
@@ -141,8 +147,13 @@ PID roundRobin(SCHEDULER *s) {
             return p.pid;
     }
 
+    // If none of the other process are available to run, schedule current.
+    p = *getCurrentProcess(s);
+    if(p.state == PS_RUNNING)
+        return p.pid;
+
     // No valid processes. We catch this already at the top of timer_interrupt.
-    return MAX_PROCESSES;
+    return MAX_PROCESSES + 1;
 }
 
 PID fair(SCHEDULER *s) {
@@ -162,8 +173,7 @@ PID fair(SCHEDULER *s) {
             p->switched_cpu_time == 0 ?
             (double)p->total_cpu_time :
             (double)p->total_cpu_time / (double)p->switched_cpu_time;
-
-        double minTime = 
+double minTime = 
             min->switched_cpu_time == 0 ?
             (double)min->total_cpu_time :
             (double)min->total_cpu_time / (double)min->switched_cpu_time;
@@ -172,7 +182,7 @@ PID fair(SCHEDULER *s) {
             min = p;
     }
     
-    return min == NULL ? MAX_PROCESSES : min->pid;
+    return min == NULL ? MAX_PROCESSES + 1 : min->pid;
 }
 
 PID fcfs(SCHEDULER *s) {
@@ -182,12 +192,15 @@ PID fcfs(SCHEDULER *s) {
 
         // Return the first process that is running.
         // This keeps the current process if it still isn't done.
+        // If it's sleeping, we can't schedule it, but we also can't go to another process until the current one exits.
         if(p->state == PS_RUNNING)
             return p->pid;
+        else if(p->state == PS_SLEEPING)
+            return MAX_PROCESSES + 1;
     }
     
     // If none are running.
-    return MAX_PROCESSES;
+    return MAX_PROCESSES + 1;
 }
 
 PID sjf(SCHEDULER *s) {   
@@ -197,7 +210,7 @@ PID sjf(SCHEDULER *s) {
     for(i = 1; i < MAX_PROCESSES; i++) {
         PROCESS *p = &s->process_list[i];
 
-        if(p->state != PS_RUNNING)
+        if(!(p->state == PS_RUNNING || p->state == PS_SLEEPING))
             continue;
         
         if(shortest == NULL)
@@ -207,7 +220,10 @@ PID sjf(SCHEDULER *s) {
             shortest = p;
     }
     
-    return shortest == NULL ? MAX_PROCESSES : shortest->pid;
+    if(shortest == NULL || shortest->state == PS_SLEEPING)
+        return MAX_PROCESSES + 1;
+    else
+        return shortest->pid;
 }
 
 
@@ -226,7 +242,7 @@ PID addProcess(SCHEDULER *s, PROCESS *p) {
         }
     }
 
-    return -1;
+    return INVALID_PID;
 }
 
 // Returns the PROCESS with processId pid.
@@ -260,12 +276,6 @@ void setNewCurrentProcess(SCHEDULER *s){
 			break;
 	}
     
-    // The algorithms return -1 if nothing can be scheduled.
-    if(pid == -1) {
-        s->current = MAX_PROCESSES;
-        return;
-    }
-
 	// Set Next Process To Current.
     s->current = pid - 1;
 }
@@ -351,12 +361,7 @@ RETURN executeCurrentProcess(SCHEDULER *s) {
     PROCESS *p = getCurrentProcess(s);
     RETURN r;
 
-    // If process 1, return cpu_time_taken as 1 and state as running.
-    if(p->pid == 1) {
-        r.state = PS_RUNNING;
-        r.cpu_time_taken = 1;
-    }
-    else if(p->total_cpu_time == 0)
+    if(p->total_cpu_time == 0)
         p->init(&s->active_registers, &r);
     else
         p->step(&s->active_registers, &r);

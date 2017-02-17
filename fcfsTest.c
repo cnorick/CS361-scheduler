@@ -26,8 +26,6 @@ void fcfs_init(REGISTER_FILE *regs, RETURN *r) {
 }
 
 int fcfsTest() {
-    printf("Testing FCFS\n\n");
-
 	SCHEDULER *s = new_scheduler(fcfs_init);
     s->scheduler_algorithm = SA_FCFS;
     

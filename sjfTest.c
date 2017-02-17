@@ -26,8 +26,6 @@ void sjf_init(REGISTER_FILE *regs, RETURN *r) {
 }
 
 int sjfTest() {
-    printf("Testing FCFS\n\n");
-
 	SCHEDULER *s = new_scheduler(sjf_init);
     s->scheduler_algorithm = SA_SJF;
     
