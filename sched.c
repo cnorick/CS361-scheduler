@@ -168,8 +168,7 @@ PID fair(SCHEDULER *s) {
             p->switched_cpu_time == 0 ?
             (double)p->total_cpu_time :
             (double)p->total_cpu_time / (double)p->switched_cpu_time;
-
-        double minTime = 
+double minTime = 
             min->switched_cpu_time == 0 ?
             (double)min->total_cpu_time :
             (double)min->total_cpu_time / (double)min->switched_cpu_time;
@@ -188,8 +187,11 @@ PID fcfs(SCHEDULER *s) {
 
         // Return the first process that is running.
         // This keeps the current process if it still isn't done.
+        // If it's sleeping, we can't schedule it, but we also can't go to another process until the current one exits.
         if(p->state == PS_RUNNING)
             return p->pid;
+        else if(p->state == PS_SLEEPING)
+            return MAX_PROCESSES + 1;
     }
     
     // If none are running.
@@ -203,7 +205,7 @@ PID sjf(SCHEDULER *s) {
     for(i = 1; i < MAX_PROCESSES; i++) {
         PROCESS *p = &s->process_list[i];
 
-        if(p->state != PS_RUNNING)
+        if(!(p->state == PS_RUNNING || p->state == PS_SLEEPING))
             continue;
         
         if(shortest == NULL)
@@ -213,7 +215,10 @@ PID sjf(SCHEDULER *s) {
             shortest = p;
     }
     
-    return shortest == NULL ? MAX_PROCESSES + 1 : shortest->pid;
+    if(shortest == NULL || shortest->state == PS_SLEEPING)
+        return MAX_PROCESSES + 1;
+    else
+        return shortest->pid;
 }
 
 
