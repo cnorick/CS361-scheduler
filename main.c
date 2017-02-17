@@ -19,7 +19,9 @@ int main() {
     printf("\n\n===================Testing Sleeping============================\n\n");
 //    sleepTest();
     printf("\n\n===================Testing Exiting and Adding More============================\n\n");
-    exitTest();
+//    exitTest();
+    printf("\n\n===================Testing Marzzzz============================\n\n");
+    marzTest();
  
 
 	return 0;

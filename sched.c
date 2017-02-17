@@ -345,12 +345,16 @@ void updateAllProcesses(SCHEDULER *s, RETURN r) {
 
             // If a process is sleeping, decrement its remaining sleep time.
             if(p->state == PS_SLEEPING) {
+                
+                // Update its state if its sleep_time has elapsed.
+                if((int)p->sleep_time_remaining - (int)r.cpu_time_taken <= 0) {
+                    p->state = PS_RUNNING;
+                    p->sleep_time_remaining = 0;
+                    continue;
+                }
+
                 // Decrement sleep_time_rmaining by elapsedTime.
                 p->sleep_time_remaining -= r.cpu_time_taken;
-
-                // Update its state if its sleep_time has elapsed.
-                if(p->sleep_time_remaining <= 0)
-                    p->state = PS_RUNNING;
             }
         }
     }
