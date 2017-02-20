@@ -104,15 +104,18 @@ int fork(SCHEDULER *s, PID src_p) {
 ////Overwrite the current process with the new information
 ////This exec is called on any PID that IS NOT 1!
 ////exec overwrites the given process with the new name, init, and step
+////Returns 0 on failure. Non-zero on success.
 int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PROCESS_CODE_PTR(step), int job_time) {
     // Don't try to exec init.
     if(pid == 1)
-        return -1;
+        return 0;
     
     // Get the process you want to exec.
     PROCESS *p = getProcess(s, pid);
     if(p == NULL)
-        return -1;
+        return 0;
+    if(p->state == PS_NONE)
+        return 0;
 
     // Reset counters.
     initializeProcess(s, pid);
@@ -122,6 +125,8 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
     p->init = init;
     p->step = step;
     p->job_time = job_time;
+
+    return 1;
 }
 
 
