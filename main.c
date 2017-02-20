@@ -24,6 +24,8 @@ int main() {
     marzTest();
     printf("\n\n===================Testing Mutex============================\n\n");
     mutexTest();
+    printf("\n\n===================Testing Semaphores============================\n\n");
+    semaphoreTest();
  
 
 	return 0;

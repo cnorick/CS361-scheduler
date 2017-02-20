@@ -79,6 +79,10 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     for(i = 0; i < MAX_MUTEX; i++)
         s->mutex_list[i] = -1;
 
+    // Initialize all the semaphores as not existing.
+    for(i = 0; i < MAX_SEM; i++)
+        s->sem_list[i] = -1;
+
     // Load init into the scheculer and set it as running.
     addProcess(s, &init);
 
@@ -185,6 +189,59 @@ void mutex_unlock(SCHEDULER *s, MUTEX m) {
     }
 
     // If it's already unlocked or doesn't exist, then do nothing.
+}
+
+
+// Semaphore definitions:
+// -1: There is no semaphore at that index.
+// >= 0: The semaphore exists and has a number of what the value is at the index.
+
+// Returns semaphore id or -1 if one can't be allocated.
+SEMAPHORE sem_create(SCHEDULER *s) {
+    int i;
+    for(i = 0; i < MAX_SEM; i++) {
+        if(s->sem_list[i] == -1) {
+            s->sem_list[i] = 0;
+            return i;
+        }
+    }
+    // None can be created.
+    return -1;
+}
+
+// if m is in bounds, set the semaphore at m to -1.
+void sem_destroy(SCHEDULER *s, SEMAPHORE m) {
+    if(m < 0 || m >= MAX_SEM)
+        return;
+
+    s->sem_list[m] = -1;
+}
+
+//Raises or lowers the semaphore number of semaphore m
+void sem_up(SCHEDULER *s, SEMAPHORE m) {
+    // Check bounds.
+    if(m < 0 || m >= MAX_SEM)
+        return;
+    
+    // Check that semaphore exists.
+    if(s->sem_list[m] == -1)
+        return;
+
+    s->sem_list[m]++;
+}
+
+// Returns the number of resources remaining BEFORE the count is decremented.
+int sem_down(SCHEDULER *s, SEMAPHORE m) {
+    // Check bounds.
+    if(m < 0 || m >= MAX_SEM)
+        return 0;
+    
+    else if(s->sem_list[m] > 0) {
+        // Post-decrement because we want to return > 0 if there is a resource left.
+        return s->sem_list[m]--;
+    }
+    // For those non-existent and those that == 0.
+    else return 0;
 }
 
 
