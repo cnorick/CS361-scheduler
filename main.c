@@ -22,6 +22,8 @@ int main() {
     exitTest();
     printf("\n\n===================Testing Marzzzz============================\n\n");
     marzTest();
+    printf("\n\n===================Testing Mutex============================\n\n");
+    mutexTest();
  
 
 	return 0;

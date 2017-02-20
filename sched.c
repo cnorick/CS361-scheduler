@@ -75,6 +75,10 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     for(i = 0; i < MAX_PROCESSES; i++)
         s->process_list[i].state = PS_NONE;
 
+    // Initialize all the mutexes as not existing.
+    for(i = 0; i < MAX_MUTEX; i++)
+        s->mutex_list[i] = -1;
+
     // Load init into the scheculer and set it as running.
     addProcess(s, &init);
 
@@ -127,6 +131,60 @@ int exec(SCHEDULER *s, PID pid, const char *new_name, PROCESS_CODE_PTR(init), PR
     p->job_time = job_time;
 
     return 1;
+}
+
+// Mutex definitions:
+// -1: There is no mutex at that index.
+// 0: Mutex is created, but not locked.
+// 1: Mutex is locked.
+
+// Returns mutex id or -1 if one can't be allocated.
+MUTEX mutex_create(SCHEDULER *s) {
+    int i;
+    for(i = 0; i < MAX_MUTEX; i++) {
+        if(s->mutex_list[i] == -1) {
+            s->mutex_list[i] = 0;
+            return i;
+        }
+    }
+    // None can be created.
+    return -1;
+}
+
+// If m is in bounds, set the mutex at that index to -1 (non-existent).
+void mutex_destroy(SCHEDULER *s, MUTEX m) {
+    if(m < 0 || m >= MAX_MUTEX)
+        return;
+
+    s->mutex_list[m] = -1;
+}
+
+//Lock or unlock a mutex given by the mutex index m
+//If a lock cannot be granted, return 0, otherwise return 1
+int mutex_lock(SCHEDULER *s, MUTEX m) {
+    if(m < 0 || m >= MAX_MUTEX)
+        return 0;
+
+    // If it's unlocked...
+    else if(s->mutex_list[m] == 0) {
+        s->mutex_list[m] = 1;
+        return 1;
+    }
+
+    // If it's locked already, or it doesn't exist at all...
+    else return 0;
+}
+
+void mutex_unlock(SCHEDULER *s, MUTEX m) {
+    if(m < 0 || m >= MAX_MUTEX)
+        return;
+
+    // If it's locked...
+    else if(s->mutex_list[m] == 1) {
+        s->mutex_list[m] = 0;
+    }
+
+    // If it's already unlocked or doesn't exist, then do nothing.
 }
 
 
