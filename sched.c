@@ -30,10 +30,10 @@ PID sjf(SCHEDULER *s);
 void timer_interrupt(SCHEDULER *s) {
     RETURN r; 
     
-	saveActiveProcessRegisters(s);
+    saveActiveProcessRegisters(s);
     
     // Sets current to MAX_PROCESSES if no process can be scehduled.
-	setNewCurrentProcess(s);
+    setNewCurrentProcess(s);
 
     if(s->current == MAX_PROCESSES)
         r.cpu_time_taken = 1;
@@ -83,7 +83,7 @@ SCHEDULER *new_scheduler(PROCESS_CODE_PTR(initCode)) {
     for(i = 0; i < MAX_SEM; i++)
         s->sem_list[i] = -1;
 
-    // Load init into the scheculer and set it as running.
+    // Load init into the scheduler and set it as running.
     addProcess(s, &init);
 
     s->current = MAX_PROCESSES;
